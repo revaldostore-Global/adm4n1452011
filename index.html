@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Revaldo — Admin</title>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@300;400;600&display=swap" rel="stylesheet">
+    <style>
+        *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+        :root { --cyan: #00ffff; --glow: 0 0 20px #00ffff, 0 0 40px #00ffff; }
+        body { background: #000; color: #fff; font-family: 'Rajdhani', sans-serif; min-height: 100vh; }
+        canvas#stars { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 0; pointer-events: none; }
+        #loginScreen { position: fixed; inset: 0; z-index: 200; display: flex; align-items: center; justify-content: center; background: #000; }
+        .login-box { width: 320px; padding: 48px 40px; background: rgba(0,0,0,0.7); border: 2px solid var(--cyan); border-radius: 12px; text-align: center; box-shadow: var(--glow); }
+        .login-box h1 { font-family: 'Orbitron', monospace; font-size: 16px; letter-spacing: 4px; color: var(--cyan); margin-bottom: 8px; }
+        .login-box p { font-size: 13px; color: rgba(255,255,255,0.4); letter-spacing: 2px; margin-bottom: 28px; }
+        .login-box input { width: 100%; padding: 12px 16px; background: rgba(0,255,255,0.05); border: 1px solid rgba(0,255,255,0.3); border-radius: 6px; color: var(--cyan); font-size: 16px; outline: none; text-align: center; letter-spacing: 4px; margin-bottom: 16px; }
+        .login-box input:focus { border-color: var(--cyan); }
+        .login-box button { width: 100%; padding: 12px; background: var(--cyan); color: #000; border: none; border-radius: 6px; font-family: 'Orbitron', monospace; font-size: 13px; letter-spacing: 3px; cursor: pointer; transition: all 0.2s; }
+        .login-box button:hover { box-shadow: var(--glow); }
+        .login-err { color: #ff6b6b; font-size: 13px; margin-top: 12px; display: none; }
+        #adminUI { display: none; position: relative; z-index: 1; }
+        nav { position: sticky; top: 0; display: flex; justify-content: space-between; align-items: center; padding: 16px 40px; background: rgba(0,0,0,0.85); backdrop-filter: blur(14px); border-bottom: 1px solid rgba(0,255,255,0.2); z-index: 10; }
+        .logo { font-family: 'Orbitron', monospace; font-size: 16px; letter-spacing: 4px; color: var(--cyan); text-shadow: var(--glow); }
+        .nav-right { display: flex; gap: 16px; align-items: center; }
+        .nav-right a { color: rgba(255,255,255,0.5); text-decoration: none; font-size: 13px; letter-spacing: 2px; text-transform: uppercase; transition: color 0.2s; }
+        .nav-right a:hover { color: var(--cyan); }
+        .logout-btn { padding: 7px 20px; border: 1px solid var(--cyan); border-radius: 4px; background: transparent; color: var(--cyan); font-size: 12px; letter-spacing: 2px; cursor: pointer; transition: all 0.2s; }
+        .logout-btn:hover { background: var(--cyan); color: #000; }
+
+        /* Stats Bar */
+        .stats-bar { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px,1fr)); gap: 16px; padding: 28px 40px 0; max-width: 1100px; margin: 0 auto; }
+        .stat-card { background: rgba(0,255,255,0.04); border: 1px solid rgba(0,255,255,0.2); border-radius: 10px; padding: 20px 22px; position: relative; overflow: hidden; }
+        .stat-card::before { content:''; position:absolute; top:0; left:0; right:0; height:2px; background:linear-gradient(90deg,transparent,var(--cyan),transparent); }
+        .stat-label { font-family:'Orbitron',monospace; font-size:9px; letter-spacing:3px; color:rgba(0,255,255,0.6); text-transform:uppercase; margin-bottom:8px; }
+        .stat-value { font-family:'Orbitron',monospace; font-size:26px; color:var(--cyan); text-shadow:var(--glow); }
+        .stat-sub { font-size:12px; color:rgba(255,255,255,0.3); margin-top:4px; }
+
+        .content { padding: 26px 40px; max-width: 1100px; margin: 0 auto; }
+        .section-title { font-family: 'Orbitron', monospace; font-size: 12px; letter-spacing: 5px; color: var(--cyan); text-transform: uppercase; margin-bottom: 22px; }
+        .add-form { background: rgba(0,255,255,0.04); border: 1px solid rgba(0,255,255,0.2); border-radius: 10px; padding: 28px; margin-bottom: 36px; }
+        .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 14px; }
+        .form-row.full { grid-template-columns: 1fr; }
+        .form-group { display: flex; flex-direction: column; gap: 5px; }
+        .form-group label { font-size: 10px; letter-spacing: 3px; color: rgba(0,255,255,0.6); text-transform: uppercase; }
+        .form-group input, .form-group textarea { padding: 9px 13px; background: rgba(0,0,0,0.5); border: 1px solid rgba(0,255,255,0.2); border-radius: 6px; color: #fff; font-family: 'Rajdhani', sans-serif; font-size: 15px; outline: none; transition: border 0.2s; }
+        .form-group input:focus, .form-group textarea:focus { border-color: var(--cyan); }
+        .form-group textarea { resize: vertical; min-height: 80px; }
+        .add-btn { padding: 11px 32px; background: var(--cyan); color: #000; border: none; border-radius: 6px; font-family: 'Orbitron', monospace; font-size: 11px; letter-spacing: 3px; cursor: pointer; transition: all 0.2s; }
+        .add-btn:hover { box-shadow: var(--glow); transform: translateY(-1px); }
+        .form-msg { font-size: 13px; margin-top: 12px; display: none; }
+        .form-msg.success { color: #00ff88; display: block; }
+        .form-msg.error { color: #ff6b6b; display: block; }
+        .products-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px,1fr)); gap: 14px; margin-bottom: 40px; }
+        .product-card { background: rgba(0,0,0,0.5); border: 1px solid rgba(0,255,255,0.15); border-radius: 10px; padding: 18px; position: relative; transition: border 0.2s; }
+        .product-card:hover { border-color: var(--cyan); }
+        .product-card .emoji { font-size: 28px; margin-bottom: 10px; }
+        .product-card h3 { font-family: 'Orbitron', monospace; font-size: 11px; letter-spacing: 2px; color: var(--cyan); margin-bottom: 5px; }
+        .product-card p { font-size: 13px; color: rgba(255,255,255,0.4); margin-bottom: 8px; line-height: 1.5; }
+        .product-card .price { font-family: 'Orbitron', monospace; font-size: 14px; color: #fff; }
+        .del-btn { position: absolute; top: 12px; right: 12px; background: rgba(255,0,0,0.1); border: 1px solid rgba(255,0,0,0.3); color: #ff6b6b; border-radius: 4px; padding: 3px 9px; font-size: 12px; cursor: pointer; transition: all 0.2s; }
+        .del-btn:hover { background: rgba(255,0,0,0.25); }
+        .orders-table { width: 100%; border-collapse: collapse; font-size: 14px; }
+        .orders-table th { font-family: 'Orbitron', monospace; font-size: 9px; letter-spacing: 3px; color: var(--cyan); text-align: left; padding: 11px 14px; border-bottom: 1px solid rgba(0,255,255,0.2); }
+        .orders-table td { padding: 12px 14px; border-bottom: 1px solid rgba(255,255,255,0.05); color: rgba(255,255,255,0.8); vertical-align: middle; }
+        .orders-table tr:hover td { background: rgba(0,255,255,0.02); }
+        .status-select { background: rgba(0,0,0,0.5); border: 1px solid rgba(0,255,255,0.2); color: #fff; padding: 4px 8px; border-radius: 4px; font-size: 12px; cursor: pointer; outline: none; }
+        .review-card { background: rgba(0,0,0,0.45); border: 1px solid rgba(0,255,255,0.12); border-radius: 10px; padding: 18px; margin-bottom: 12px; }
+        .review-card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; flex-wrap: wrap; gap: 6px; }
+        .review-product { font-family: 'Orbitron', monospace; font-size: 10px; letter-spacing: 2px; color: var(--cyan); }
+        .review-author-info { font-size: 12px; color: rgba(255,255,255,0.4); }
+        .review-stars { color: #ffd700; font-size: 14px; margin-bottom: 6px; }
+        .review-body { font-size: 14px; color: rgba(255,255,255,0.7); line-height: 1.5; }
+        .empty-state { text-align: center; padding: 48px; color: rgba(255,255,255,0.2); font-size: 14px; letter-spacing: 2px; }
+        .tab-btns { display: flex; gap: 10px; margin-bottom: 28px; flex-wrap: wrap; }
+        .tab-btn { padding: 9px 26px; border: 1px solid rgba(0,255,255,0.3); border-radius: 6px; background: transparent; color: rgba(255,255,255,0.5); font-family: 'Orbitron', monospace; font-size: 10px; letter-spacing: 3px; cursor: pointer; transition: all 0.2s; }
+        .tab-btn.active { background: var(--cyan); color: #000; border-color: var(--cyan); }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+        .del-order-btn { background: rgba(255,0,0,0.08); border: 1px solid rgba(255,0,0,0.25); color: #ff6b6b; border-radius: 4px; padding: 4px 10px; font-size: 12px; cursor: pointer; transition: all 0.2s; white-space: nowrap; }
+        .del-order-btn:hover { background: rgba(255,0,0,0.22); border-color: #ff6b6b; box-shadow: 0 0 10px rgba(255,0,0,0.2); }
+        .badge { display: inline-block; background: rgba(255,80,80,0.15); border: 1px solid rgba(255,80,80,0.3); color: #ff6b6b; border-radius: 12px; padding: 1px 8px; font-size: 10px; margin-left: 6px; font-family: 'Orbitron', monospace; }
+        .coupon-badge { background: rgba(0,255,128,0.15); border-color: rgba(0,255,128,0.3); color: #00ff88; }
+        .coupons-table { width:100%; border-collapse:collapse; font-size:14px; margin-top:20px; }
+        .coupons-table th { font-family:'Orbitron',monospace; font-size:9px; letter-spacing:3px; color:var(--cyan); text-align:left; padding:11px 14px; border-bottom:1px solid rgba(0,255,255,0.2); }
+        .coupons-table td { padding:12px 14px; border-bottom:1px solid rgba(255,255,255,0.05); color:rgba(255,255,255,0.8); vertical-align:middle; }
+        .coupon-code { font-family:'Orbitron',monospace; font-size:13px; color:var(--cyan); letter-spacing:2px; }
+        .coupon-discount { font-family:'Orbitron',monospace; color:#00ff88; font-size:16px; }
+    </style>
+</head>
+<body>
+<canvas id="stars"></canvas>
+
+<div id="loginScreen">
+    <div class="login-box">
+        <h1>ADMIN ACCESS</h1>
+        <p>ENTER PASSWORD TO CONTINUE</p>
+        <input type="password" id="adminPass" placeholder="••••••••" onkeydown="if(event.key==='Enter')adminLogin()">
+        <button onclick="adminLogin()">ENTER</button>
+        <p class="login-err" id="loginErr">❌ Wrong password</p>
+    </div>
+</div>
+
+<div id="adminUI">
+    <nav>
+        <div class="logo">REVALDO — ADMIN</div>
+        <div class="nav-right">
+            <a href="index.html">← Back to Store</a>
+            <button class="logout-btn" onclick="adminLogout()">LOGOUT</button>
+        </div>
+    </nav>
+
+    <div class="stats-bar">
+        <div class="stat-card">
+            <div class="stat-label">Total Products</div>
+            <div class="stat-value" id="statProducts">—</div>
+            <div class="stat-sub">In your catalog</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-label">Total Orders</div>
+            <div class="stat-value" id="statOrders">—</div>
+            <div class="stat-sub">All time</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-label">Pending Value</div>
+            <div class="stat-value" id="statPending">—</div>
+            <div class="stat-sub">Awaiting confirmation</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-label">Total Revenue</div>
+            <div class="stat-value" id="statRevenue">—</div>
+            <div class="stat-sub">Confirmed + Done</div>
+        </div>
+    </div>
+
+    <div class="content">
+        <div class="tab-btns">
+            <button class="tab-btn active" onclick="switchTab('products',event)">PRODUCTS</button>
+            <button class="tab-btn" onclick="switchTab('orders',event)">ORDERS</button>
+            <button class="tab-btn" onclick="switchTab('reviews',event)">REVIEWS <span class="badge" id="revBadge">0</span></button>
+            <button class="tab-btn" onclick="switchTab('coupons',event)">COUPONS <span class="badge coupon-badge" id="couponBadge">0</span></button>
+        </div>
+
+        <div class="tab-content active" id="tab-products">
+            <p class="section-title">// Add New Product</p>
+            <div class="add-form">
+                <div class="form-row">
+                    <div class="form-group"><label>Product Name</label><input type="text" id="pName" placeholder="Nova Jacket"></div>
+                    <div class="form-group"><label>Price ($)</label><input type="number" id="pPrice" placeholder="99"></div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group"><label>Emoji Icon</label><input type="text" id="pEmoji" placeholder="🚀" maxlength="4"></div>
+                    <div class="form-group"><label>Description</label><input type="text" id="pDesc" placeholder="Short description..."></div>
+                </div>
+                <div class="form-row full">
+                    <div class="form-group"><label>Image URL (optional)</label><input type="text" id="pImage" placeholder="https://example.com/image.jpg"></div>
+                </div>
+                <button class="add-btn" onclick="addProduct()">+ ADD PRODUCT</button>
+                <p class="form-msg" id="formMsg"></p>
+            </div>
+            <p class="section-title">// Current Products</p>
+            <div class="products-grid" id="productsGrid"><div class="empty-state">NO PRODUCTS YET</div></div>
+        </div>
+
+        <div class="tab-content" id="tab-orders">
+            <p class="section-title">// Incoming Orders</p>
+            <div id="ordersContainer"><div class="empty-state">NO ORDERS YET</div></div>
+        </div>
+
+        <div class="tab-content" id="tab-reviews">
+            <p class="section-title">// Customer Reviews</p>
+            <div id="reviewsContainer"><div class="empty-state">NO REVIEWS YET</div></div>
+        </div>
+
+        <div class="tab-content" id="tab-coupons">
+            <p class="section-title">// Create Coupon</p>
+            <div class="add-form">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Coupon Code</label>
+                        <input type="text" id="cCode" placeholder="SAVE20" style="text-transform:uppercase">
+                    </div>
+                    <div class="form-group">
+                        <label>Discount (%)</label>
+                        <input type="number" id="cDiscount" placeholder="20" min="1" max="100">
+                    </div>
+                </div>
+                <button class="add-btn" onclick="addCoupon()">+ CREATE COUPON</button>
+                <p class="form-msg" id="couponMsg"></p>
+            </div>
+            <p class="section-title">// Active Coupons</p>
+            <div id="couponsContainer"><div class="empty-state">NO COUPONS YET</div></div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+    const SUPA_URL = "https://ejqhkkweiduofqedihji.supabase.co";
+    const SUPA_KEY = "sb_publishable_kt9rq_670vpNJMQaof9KhQ_sAChVKxH";
+    const sb = supabase.createClient(SUPA_URL, SUPA_KEY);
+    const ADMIN_PASSWORD = "admin1234";
+
+    const canvas = document.getElementById("stars"), ctx = canvas.getContext("2d");
+    canvas.width = window.innerWidth; canvas.height = window.innerHeight;
+    const stars = Array.from({length:150},()=>({x:Math.random()*canvas.width,y:Math.random()*canvas.height,r:Math.random()*1.2+0.2,a:Math.random(),speed:Math.random()*0.005+0.002}));
+    function drawStars(){ctx.clearRect(0,0,canvas.width,canvas.height);stars.forEach(s=>{s.a+=s.speed;ctx.beginPath();ctx.arc(s.x,s.y,s.r,0,Math.PI*2);ctx.fillStyle=`rgba(0,255,255,${0.3+0.5*Math.abs(Math.sin(s.a))})`;ctx.fill();});requestAnimationFrame(drawStars);}
+    drawStars();
+
+    window.onload = () => { if(sessionStorage.getItem("adminAuth")==="true") showAdmin(); };
+    function adminLogin(){ if(document.getElementById("adminPass").value===ADMIN_PASSWORD){sessionStorage.setItem("adminAuth","true");showAdmin();}else{document.getElementById("loginErr").style.display="block";} }
+    function showAdmin(){ document.getElementById("loginScreen").style.display="none"; document.getElementById("adminUI").style.display="block"; loadProducts(); loadOrders(); loadReviews(); loadCoupons(); }
+    function adminLogout(){ sessionStorage.removeItem("adminAuth"); location.reload(); }
+    function switchTab(tab,e){ document.querySelectorAll(".tab-btn").forEach(b=>b.classList.remove("active")); document.querySelectorAll(".tab-content").forEach(c=>c.classList.remove("active")); document.getElementById("tab-"+tab).classList.add("active"); if(e)e.target.classList.add("active"); }
+
+    async function loadProducts(){
+        const {data:products} = await sb.from("products").select("*").order("created_at",{ascending:false});
+        const grid = document.getElementById("productsGrid");
+        document.getElementById("statProducts").textContent = products?products.length:0;
+        if(!products||!products.length){grid.innerHTML='<div class="empty-state">NO PRODUCTS YET</div>';return;}
+        grid.innerHTML = products.map(p=>`<div class="product-card">
+            <button class="del-btn" onclick="deleteProduct('${p.id}')">✕</button>
+            ${p.image_url?`<img src="${p.image_url}" style="width:100%;height:130px;object-fit:cover;border-radius:6px;margin-bottom:10px;">`:`<div class="emoji">${p.emoji||'📦'}</div>`}
+            <h3>${p.name}</h3><p>${p.description||"—"}</p><div class="price">$${p.price}</div>
+        </div>`).join("");
+    }
+
+    async function addProduct(){
+        const name=document.getElementById("pName").value.trim(), price=document.getElementById("pPrice").value;
+        const emoji=document.getElementById("pEmoji").value.trim()||"📦", desc=document.getElementById("pDesc").value.trim();
+        const image_url=document.getElementById("pImage").value.trim()||null, msg=document.getElementById("formMsg");
+        if(!name||!price){msg.textContent="❌ Name and Price are required";msg.className="form-msg error";return;}
+        const {error}=await sb.from("products").insert([{name,price:parseFloat(price),emoji,description:desc,image_url}]);
+        if(!error){msg.textContent="✅ Product added!";msg.className="form-msg success";["pName","pPrice","pEmoji","pDesc","pImage"].forEach(id=>document.getElementById(id).value="");loadProducts();}
+        else{msg.textContent="❌ "+error.message;msg.className="form-msg error";}
+        setTimeout(()=>msg.style.display="none",3000);
+    }
+
+    async function deleteProduct(id){ if(!confirm("Delete this product?"))return; await sb.from("products").delete().eq("id",id); loadProducts(); }
+
+    async function loadOrders(){
+        const {data:orders} = await sb.from("orders").select("*").order("created_at",{ascending:false});
+        const container = document.getElementById("ordersContainer");
+        document.getElementById("statOrders").textContent = orders?orders.length:0;
+        if(!orders||!orders.length){container.innerHTML='<div class="empty-state">NO ORDERS YET</div>';return;}
+        const pending = orders.filter(o=>o.status==="pending").reduce((s,o)=>s+(o.total_price||0),0);
+        const revenue = orders.filter(o=>o.status==="confirmed"||o.status==="done").reduce((s,o)=>s+(o.total_price||0),0);
+        document.getElementById("statPending").textContent="$"+pending.toFixed(0);
+        document.getElementById("statRevenue").textContent="$"+revenue.toFixed(0);
+        container.innerHTML=`<table class="orders-table"><thead><tr><th>#</th><th>Customer</th><th>Phone</th><th>Items</th><th>Total</th><th>Date</th><th>Status</th><th>Delete</th></tr></thead><tbody>${orders.map(o=>`<tr>
+            <td style="font-size:11px;opacity:0.4">${o.id.slice(0,8)}...</td>
+            <td>${o.customer_name||o.user_name||"—"}</td><td>${o.customer_phone||"—"}</td>
+            <td style="font-size:12px">${Array.isArray(o.items)?o.items.map(i=>i.name+" x"+i.qty).join(", "):"—"}</td>
+            <td>$${o.total_price||0}</td><td>${o.created_at?o.created_at.slice(0,10):"—"}</td>
+            <td><select class="status-select" onchange="updateOrder('${o.id}',this.value)">
+                <option value="pending" ${o.status==="pending"?"selected":""}>⏳ Pending</option>
+                <option value="confirmed" ${o.status==="confirmed"?"selected":""}>✅ Confirmed</option>
+                <option value="shipped" ${o.status==="shipped"?"selected":""}>🚚 Shipped</option>
+                <option value="done" ${o.status==="done"?"selected":""}>🎉 Done</option>
+            </select></td>
+            <td><button class="del-order-btn" onclick="deleteOrder('${o.id}')">✕ Delete</button></td>
+        </tr>`).join("")}</tbody></table>`;
+    }
+
+    async function updateOrder(id,status){ await sb.from("orders").update({status}).eq("id",id); loadOrders(); }
+
+    async function deleteOrder(id){
+        if(!confirm("⚠️ Delete this order permanently?")) return;
+        const { error } = await sb.from("orders").delete().eq("id", id);
+        if(error){
+            alert("❌ Failed to delete: " + error.message);
+            console.error("Delete error:", error);
+            return;
+        }
+        loadOrders();
+    }
+
+    async function addCoupon(){
+        const code=document.getElementById("cCode").value.trim().toUpperCase();
+        const discount=parseInt(document.getElementById("cDiscount").value);
+        const msg=document.getElementById("couponMsg");
+        if(!code||!discount||discount<1||discount>100){msg.textContent="❌ Enter a valid code and discount (1-100%)";msg.className="form-msg error";return;}
+        const {data:existing}=await sb.from("coupons").select("id").eq("code",code).maybeSingle();
+        if(existing){msg.textContent="❌ Coupon code already exists!";msg.className="form-msg error";return;}
+        const {error}=await sb.from("coupons").insert([{code,discount}]);
+        if(error){msg.textContent="❌ "+error.message;msg.className="form-msg error";return;}
+        msg.textContent="✅ Coupon created!";msg.className="form-msg success";
+        document.getElementById("cCode").value="";document.getElementById("cDiscount").value="";
+        setTimeout(()=>msg.style.display="none",3000);loadCoupons();
+    }
+    async function deleteCoupon(id){
+        if(!confirm("Delete this coupon?"))return;
+        await sb.from("coupons").delete().eq("id",id);loadCoupons();
+    }
+    async function loadCoupons(){
+        const container=document.getElementById("couponsContainer");
+        const {data:coupons,error}=await sb.from("coupons").select("*").order("created_at",{ascending:false});
+        document.getElementById("couponBadge").textContent=coupons?coupons.length:0;
+        if(error||!coupons||!coupons.length){container.innerHTML='<div class="empty-state">NO COUPONS YET</div>';return;}
+        container.innerHTML=`<table class="coupons-table"><thead><tr><th>Code</th><th>Discount</th><th>Created</th><th>Delete</th></tr></thead><tbody>${coupons.map(c=>`<tr><td><span class="coupon-code">${c.code}</span></td><td><span class="coupon-discount">${c.discount}% OFF</span></td><td>${c.created_at?c.created_at.slice(0,10):"—"}</td><td><button class="del-order-btn" onclick="deleteCoupon('${c.id}')">✕ Delete</button></td></tr>`).join("")}</tbody></table>`;
+    }
+
+    function loadReviews(){
+        const container = document.getElementById("reviewsContainer");
+        try{
+            const reviews = JSON.parse(localStorage.getItem("reviews")||"{}");
+            let allRevs = [];
+            for(const [pid,revArr] of Object.entries(reviews)) revArr.forEach(r=>allRevs.push({...r,pid}));
+            document.getElementById("revBadge").textContent = allRevs.length;
+            if(!allRevs.length){container.innerHTML='<div class="empty-state">NO REVIEWS YET</div>';return;}
+            container.innerHTML = allRevs.map(r=>`<div class="review-card">
+                <div class="review-card-header">
+                    <span class="review-product">PID: ${r.pid.slice(0,8)}...</span>
+                    <span class="review-author-info">${r.author} · ${r.date}</span>
+                </div>
+                <div class="review-stars">${"★".repeat(r.stars)}${"☆".repeat(5-r.stars)}</div>
+                <div class="review-body">${r.text}</div>
+            </div>`).join("");
+        }catch(e){container.innerHTML='<div class="empty-state">COULD NOT LOAD REVIEWS</div>';}
+    }
+</script>
+</body>
+</html>
